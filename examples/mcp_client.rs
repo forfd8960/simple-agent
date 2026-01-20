@@ -86,7 +86,7 @@ impl Tool for MCPWrappedTool {
 
     async fn execute(&self, args: Value) -> Result<ToolResult, ToolError> {
         let mut client = self.client.lock().await;
-        
+
         let result = client
             .call_tool(&self.name, args)
             .await
@@ -118,15 +118,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create MCP client - build first, then wrap in Arc
     let mcp_client = MCPClient::builder()
         .with_name(&args.name)
-        .with_stdio_transport(
-            args.command.unwrap_or_else(|| "npx".to_string()),
-            args.args.unwrap_or_else(|| {
-                vec![
-                    "@modelcontextprotocol/server-filesystem".to_string(),
-                    ".".to_string(),
-                ]
-            }),
-        )
+        .with_sse_transport("http://127.0.0.1:8000/sse")
+        // .with_stdio_transport(
+        //     args.command.unwrap_or_else(|| "npx".to_string()),
+        //     args.args.unwrap_or_else(|| {
+        //         vec![
+        //             "@modelcontextprotocol/server-filesystem".to_string(),
+        //             ".".to_string(),
+        //         ]
+        //     }),
+        // )
         .build()?;
 
     // Wrap in Arc<Mutex> before connecting since MCPClient has mutable methods
@@ -168,22 +169,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let session = Session::new(
         ModelConfig {
             name: "MiniMax-M2.1".to_string(),
-            max_tokens: 2048,
+            max_tokens: 4096,
             temperature: Some(0.7),
             extra: None,
         },
-        "You are a helpful assistant with access to filesystem tools. \
-         You can read files and list directories using your tools.",
+        "You are a helpful assistant with access to postgres mcp tools. \
+         You can send sql query to the database and get results back.",
     );
 
     // Create agent
     let registry = Arc::new(Mutex::new(registry));
-    let agent = Agent::with_defaults(session, llm_client, registry);
+    let mut agent_config = AgentConfig::default();
+    agent_config.model = "MiniMax-M2.1".to_string();
+
+    let agent = Agent::new(session, llm_client, registry, agent_config);
 
     // Example queries that use MCP tools
     let queries = vec![
-        "List the files in the examples directory",
-        "Read the basic_agent.rs file and tell me what it does",
+        "有多少用户？",
+        "列出所有产品名称和价格",
     ];
 
     for query in queries {

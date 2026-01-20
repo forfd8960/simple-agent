@@ -4,7 +4,7 @@ use futures::stream::{Stream, StreamExt};
 use std::pin::Pin;
 use tracing::debug;
 
-use crate::session::{Session, Message, MessageContent, MessageRole};
+use crate::session::{Message, MessageContent, MessageRole, Session, SessionStatus};
 use crate::llm::{LLMClient, LLMInput, LLMEvent, FinishReason};
 use crate::tool::{ToolExecutor, ToolRegistry, ExecutionContext};
 
@@ -122,13 +122,13 @@ impl Agent {
     pub async fn run(&self, user_input: &str) -> Result<Vec<Message>, AgentError> {
         let mut session = self.session.lock().await;
         session.add_message(Message::new_user(user_input));
-        session.status = crate::session::SessionStatus::Running;
+        session.status = SessionStatus::Running;
         drop(session);
 
         let messages = self.run_loop().await?;
 
         let mut session = self.session.lock().await;
-        session.status = crate::session::SessionStatus::Completed;
+        session.status = SessionStatus::Completed;
 
         Ok(messages)
     }

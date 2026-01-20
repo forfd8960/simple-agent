@@ -1,3 +1,3 @@
-pub mod loop_;
+pub mod agent_loop;
 
-pub use loop_::{Agent, AgentConfig, AgentEvent, AgentStream, AgentError};
+pub use agent_loop::{Agent, AgentConfig, AgentEvent, AgentStream, AgentError};
